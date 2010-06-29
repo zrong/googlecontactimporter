@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 autoDrawBackground="false"
+		 dataChange="itemrenderer1_dataChangeHandler(event)">
+	<s:layout>
+		<s:HorizontalLayout/>
+	</s:layout>
+	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+
+			//自动匹配CSV中的标题
+			protected function itemrenderer1_dataChangeHandler(event:FlexEvent):void
+			{				
+				var __dp:ArrayCollection = data.dp as ArrayCollection;
+				var __isMatching:Boolean = false;
+				var __matchingIndex:int;
+				for(var i:int=0; i<__dp.length; i++)
+				{
+					var __csvItemName:String = String(data.itemName);
+					var __googleItemName:String = String(__dp.getItemAt(i));
+					if( __csvItemName.indexOf(__googleItemName) != -1)
+					{
+						__isMatching = true;
+						__matchingIndex = i;
+						break;
+					}
+					else if(__googleItemName.indexOf(__csvItemName) != -1)
+					{	
+						__isMatching = true;
+						__matchingIndex = i;
+						break;
+					}
+				}
+				if(__isMatching)
+				{
+					listDDL.selectedIndex = __matchingIndex;
+				}
+			}
+			
+			//返回匹配对应数组
+			public function getMatching():Array
+			{
+				return [data.itemName, listDDL.selectedItem];
+			}
+		]]>
+	</fx:Script>
+	<s:Label id="nameLabel" text="{data.itemName}" width="100"/>
+	<s:DropDownList id="listDDL" dataProvider="{data.dp}"  width="100" requireSelection="true"/>
+</s:ItemRenderer>

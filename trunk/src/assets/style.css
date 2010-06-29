@@ -1,0 +1,17 @@
+/* CSS file */
+@namespace s "library://ns.adobe.com/flex/spark";
+@namespace mx "library://ns.adobe.com/flex/mx";
+s|Application
+{
+	font-family: "Microsoft YaHei","simsun";
+}
+mx|ToolTip
+{
+	font-size: 12;
+}
+.redBold
+{
+	font-size: 14;
+	font-weight: bold;
+	color: #075169;
+}

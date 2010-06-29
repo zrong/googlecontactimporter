@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   showStatusBar="false"
+					   applicationComplete="init()">
+	<fx:Script>
+		<![CDATA[
+			import comp.EntryItem;
+			
+			import flash.utils.flash_proxy;
+			
+			import google.EventVO;
+			import google.GoogleContact;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.effects.IAbstractEffect;
+			import mx.utils.ObjectUtil;
+			
+			import org.zengrong.events.InfoEvent;
+			
+			private var gc:GoogleContact;
+			private var defaultFile:File;
+			private var csvFile:File;
+			private var csvStream:FileStream;
+			
+			private var importGroup:Object;	//保存被导入的Group值。所有导入的联系人都会属于这个群组。如果该值为null，说明导入的时候没有选择要导入到一个组中。
+			private var csvGroup:Object;	//对象使用'群组'='url'的方式保存群组名称及其对应的url值
+			private var csvEntry:Array;		//通过csvEntryAC获得，在提交批量联系人数据的时候使用。由于提交联系人每次最多100个，因此使用这个数组临时保存还没有提交的联系人
+			private var insertContactStepIndex:int;	//保存第四步的批量提交进行的批次索引
+			private var usableMatching:Array	//保存第四步的匹配情况
+			
+			[Bindable]
+			private var googleGroupAC:ArrayCollection;	//从google账户中提取的群组
+			[Bindable]
+			private var csvGroupAC:ArrayCollection;		//从通过csvGroup获得，其中每项中为群组的中文名称，没有url值，这个数组仅用来在第四步的时候显示对应关系
+			[Bindable]
+			private var csvEntryAC:ArrayCollection;		//包含所有要CSV中的用户条目
+			[Bindable]
+			private var entryNameAC:ArrayCollection;	//包含CSV中的通讯录项目名称，以及google通讯录账户中项目名称，方便使用者对CSV项目和google项目进行映射和匹配。
+		
+			private function init():void
+			{
+				gc = new GoogleContact();
+				gc.addEventListener(GoogleContact.EVENT_AUTH_SUCCESS, gc_authSuccessHandler);
+				gc.addEventListener(GoogleContact.EVENT_CONTENT_CREATED, gc_contentCreatedHandler);
+				gc.addEventListener(GoogleContact.EVENT_GROUP_CREATED, gc_groupCreatedHandler);
+				gc.addEventListener(GoogleContact.EVENT_GROUP_GET, gc_groupGetHandler);
+				gc.addEventListener(GoogleContact.EVENT_ERROR, gc_errorHandler);
+				
+				defaultFile = File.desktopDirectory;
+				csvStream = new FileStream();
+			}
+			
+			private function gc_authSuccessHandler($evt:InfoEvent):void
+			{
+				var __info:String = '登录成功！\ntoken：'+$evt.info.info;
+				echo(__info);
+				first.enabled = false;
+				second.enabled = true;
+				gc.getGroups();
+			}
+			
+			private function gc_contentCreatedHandler($evt:InfoEvent):void
+			{
+				var __xml:XML = XML($evt.info.info);
+				var __ns_atom:Namespace = gc.NS_ATOM;
+				echo('创建联系人成功！数量：'+__xml.__ns_atom::entry.length());
+				insertContact();		
+			}
+			
+			private function gc_groupGetHandler($evt:InfoEvent):void
+			{
+				googleGroupAC = new ArrayCollection();
+				var __xml:XML = XML($evt.info.info);
+				var __ns_atom:Namespace = gc.NS_ATOM;
+				var __ns_gc:Namespace = gc.NS_GC;
+				
+				var __entryList:XMLList = __xml.__ns_atom::entry;
+				var __sgName:QName = new QName(__ns_gc, 'systemGroup');
+				var __echoArr:Array = [];
+				for each(var entry:XML in __entryList)
+				{
+					var __groupObj:Object = new Object();
+					//将系统群组的id提取出来进行显示，非系统群组采用title进行显示
+					if(entry.hasOwnProperty(__sgName))
+					{
+						__groupObj.label = entry.__ns_gc::systemGroup.@id[0].toString();
+						__groupObj.data = entry.__ns_atom::id[0].toString();
+					}
+					else
+					{
+						__groupObj.label = entry.__ns_atom::title[0].toString();
+						__groupObj.data = entry.__ns_atom::id[0].toString();
+					}
+					__echoArr.push(__groupObj.label);
+					googleGroupAC.addItem(__groupObj);
+				}
+				echo('获取google账户联系人群组成功！数量：'+__echoArr.length);
+				echo('已有的联系人群组：'+__echoArr.toString());
+			}
+			
+			private function gc_groupCreatedHandler($evt:InfoEvent):void
+			{
+				var __ns_atom:Namespace = gc.NS_ATOM;
+				var __ns_ba:Namespace = gc.NS_BA;
+				var __entryList:XMLList = XML($evt.info.info).__ns_atom::entry;
+				
+				var __statusLength:int = __entryList.__ns_ba::status.length(); 
+				if(__statusLength > 0)
+				{
+					third.enabled = false;
+					fourth.enabled = true;
+					var __msg:String = '批量创建联系人群组成功！';
+					alert(__msg);
+					echo(__msg+'数量：'+__statusLength.toString());
+					
+					//将用户输入的新群组的url保存到importGroup中
+					if(importGroup)
+					{
+						if(importGroup.data == undefined)
+						{
+							importGroup.data = __entryList.(__ns_atom::title==importGroup.label).__ns_atom::id[0].toString();
+						}
+					}
+					//将创建的群组的url保存到csvGroupAC中
+					//同时将组名与url的对应关系保存在对象中，这样设置csvEntryAC的中的群组值的时候就不需要使用循环了。
+					for(var groupName:String in csvGroup )
+					{
+						var __entry:XMLList = __entryList.(__ns_atom::title==groupName);
+						if(__entry.length() > 0)
+						{
+							csvGroup[groupName] = __entry.__ns_atom::id[0].toString();
+						}
+					}
+					//设置csvEntryAC中群组的值，将群组名称换成群组的url
+					setCsvEntryGroupUrl();
+				}
+				else
+				{
+					alert('创建联系人群组成功！');
+				}
+			}
+			
+			private function gc_errorHandler($evt:InfoEvent):void
+			{
+				var __errVO:EventVO = $evt.info as EventVO;
+				echo(__errVO.info);
+				alert(__errVO.info);
+			}
+			
+			private function csv_selectHandler(evt:Event):void
+			{
+				var __selectFile:File = evt.target as File;
+				if(__selectFile.extension.toLowerCase() != 'csv')
+				{
+					alert('选择的不是CSV文件！');
+				}
+				else
+				{
+					csvStream.open(__selectFile, FileMode.READ);
+					var __csv:String = csvStream.readUTFBytes(csvStream.bytesAvailable);
+					//清除csv文件中字段两边的引号
+					__csv = __csv.replace(/\"/g, '');
+					//如果csv文本最后以换行符结尾，就删除这个换行符
+					if(__csv.lastIndexOf(GoogleContact.CSV_LINE_BREAK) == (__csv.length-1))
+					{
+						__csv = __csv.substr(0, __csv.length-1);
+					}
+					var __allCSV:Array = __csv.split(GoogleContact.CSV_LINE_BREAK); 
+					buildContactArray(__allCSV);
+					second.enabled = false;
+					third.enabled = true;
+				}				
+			}
+			
+			//=======================组件事件
+			
+			private function selectCSVBTN_clickHandler():void
+			{
+				if(csvFile == null)
+				{
+					csvFile = defaultFile;
+				}
+				else
+				{
+					if(csvFile.hasEventListener(Event.SELECT))
+					{
+						csvFile.removeEventListener(Event.SELECT, csv_selectHandler);
+					}
+				}
+				csvFile.addEventListener(Event.SELECT, csv_selectHandler);
+				csvFile.browseForOpen('选择CSV文件', [new FileFilter('CSV文件','*.csv')]);			
+			}
+			
+			private function createGroupBTN_clickHandler():void
+			{
+				//要新建的group名称的数组
+				var __createGroup:Array = [];
+				//循环剔除google账户中已有的同名组，并将同名组的url保存到csvGroup中
+				for(var i:String in csvGroup)
+				{
+					var __isMatching:Boolean = false;
+					var __data:String;
+					for(var j:int=0; j<googleGroupAC.length; j++)
+					{
+						var __j:Object = googleGroupAC.getItemAt(j);
+						if(i == __j.label)
+						{
+							__isMatching = true;
+							__data = __j.data;
+							break;
+						}
+					}
+					if(__isMatching)
+					{
+						//将google账户与CSV中同名的群组的url保存到csvGroup中备用
+						csvGroup[i] = __data;
+					}
+					else
+					{
+						//不同名的组加入数组进行创建
+						__createGroup.push(i);
+					}
+				}
+
+				//检查用户是否选择了一个已有组需导入，或者输入了一个新组
+				if(importToGoogleGroupCB.selected)
+				{
+					if(selectImportGroupCOB.selectedIndex == -1)
+					{
+						alert('必须输入一个要新建的群组名称');
+					}
+					else if(selectImportGroupCOB.selectedIndex == -3)
+					{
+						var __noBlank:RegExp = /\S/g;
+						var __name:String = String(selectImportGroupCOB.selectedItem);
+						//若输入的新群组名称合法，就将其保存在需要创建的新群组列表中的，并为同时导入的群组赋值
+						if(__noBlank.test(__name))
+						{
+							var __nameNoBlank:String = __name.replace(/\s/g, '');
+							importGroup = {label:__nameNoBlank};
+							__createGroup.push(__nameNoBlank);
+						}
+						else
+						{
+							alert('字符名称不能为空格！');
+						}
+					}
+					else
+					{
+						//若用户选择了一个群组，就将使用这个群组为导入的群组赋值
+						importGroup = selectImportGroupCOB.selectedItem;
+					}
+				}
+				else
+				{
+					importGroup = null;
+				}
+				//如果没有群组需要创建，说明csv中的所有群组在google账户中都能访问，就不需要提交
+				if(__createGroup.length > 0)
+				{
+					gc.insertGroup(gc.getGroupInsertBatch(__createGroup), true);
+				}
+				else
+				{
+					alert('没有需要创建的群组！');
+					third.enabled = false;
+					fourth.enabled = true;
+					
+					//设置csvEntryAC中群组的值，将群组名称换成群组的url
+					setCsvEntryGroupUrl();
+				}
+			}
+			
+			private function importBTN_clickHandler():void
+			{
+				//制作一个项目名称匹配数组，不包含没有选择匹配的项目
+				usableMatching = [];
+				for(var i:int=0; i<entryNameAC.length; i++)
+				{
+					var __item:EntryItem = entryMatchingDG.getElementAt(i) as EntryItem;
+					var __matching:Array = __item.getMatching();
+					if(__matching[1] != GoogleContact.NO_MATCH)
+					{
+						usableMatching.push(__matching);
+					}
+				}
+				csvEntry = csvEntryAC.toArray();
+				insertContact();
+				fourth.enabled = false;
+			}
+			
+			//=======================自定义方法
+			
+			private function insertContact():void
+			{
+				if(csvEntry.length > 0)
+				{
+					var __stepCount:int = 99;
+					if(isNaN(insertContactStepIndex))
+					{
+						insertContactStepIndex = 0;
+					}
+					else
+					{
+						insertContactStepIndex ++;	
+					}
+					var __step:Array = [];
+					if(csvEntry.length > 100)
+					{
+						__step = csvEntry.splice(0, 100);
+					}
+					else
+					{
+						__step = csvEntry.splice(0);
+						__stepCount = __step.length;
+					}
+					var __batch:XML = gc.getContactInsertBatch(usableMatching, __step, importGroup);
+					gc.inertContact(__batch);
+					echo(	'第'+insertContactStepIndex.toString()+'次提交，提交'+
+							(insertContactStepIndex*100).toString()+'-'+
+							(insertContactStepIndex*100+__stepCount).toString()	);
+				}
+			}
+			
+			//设置csvEntryAC中群组的值，将群组名称换成群组的url
+ 			private function setCsvEntryGroupUrl():void
+			{	
+				for each(var entry:Object in csvEntryAC)
+				{
+					if(entry[GoogleContact.CSV_GROUP_FIELD_NAME])
+					{
+						var __groupName:String = entry[GoogleContact.CSV_GROUP_FIELD_NAME]; 
+						entry[GoogleContact.CSV_GROUP_FIELD_NAME] = csvGroup[__groupName];
+					}
+				}
+			}
+			
+			//填充csvEntryAC、csvGroupAC、entryNameAC与csvGroup
+			private function buildContactArray($csv:Array):void
+			{
+				csvEntryAC = new ArrayCollection();		
+				var __names:Array = String($csv[0]).split(GoogleContact.CSV_SEPARATOR);
+				csvGroup = new Object();
+						
+				echo('CSV标题名称：'+__names);
+				echo('包含标题的数组长度：'+ $csv.length);
+				
+				for(var i:int=1; i<$csv.length; i++)
+				{
+					var __obj:Object = new Object();
+					var __values:Array = String($csv[i]).split(GoogleContact.CSV_SEPARATOR);
+					for(var j:int=0; j<__names.length; j++)
+					{
+						var __value:* =  __values[j];
+						if(__value == '' || __value == undefined)
+						{
+							__value = null;
+						}
+						else
+						{
+							//将群组的值进行过滤，存入临时的Object中（Object不允许有重复的名称，此举可以过滤掉重复的群组值）
+							if(__names[j] == GoogleContact.CSV_GROUP_FIELD_NAME)
+							{	//如果群组名称为*或未定义，就不算作群组
+								if(__value == '*')
+								{
+									//将没有群组的联系人的群组值设置为null
+									__value = null;
+								}
+								else
+								{	
+									csvGroup[__value] = '';
+								}
+							}
+						}
+						__obj[__names[j]] = __value;		
+					}					
+					csvEntryAC.addItem(__obj);
+				}
+				buildCSVGroupAC();
+				buildEntryNameAC(__names);
+				echo('最终建立的数组的长度：'+csvEntryAC.length);
+			}
+			
+			//填充csvGroupAC
+			private function buildCSVGroupAC():void
+			{
+				csvGroupAC = new ArrayCollection();
+				//从临时Object中获取不重复的群组名称数组
+				for(var l:String in csvGroup)
+				{
+					csvGroupAC.addItem(l);
+				}
+			}
+			
+			//填充entryItemAC
+			private function buildEntryNameAC($names:Array):void
+			{
+				entryNameAC = new ArrayCollection();
+				var __itemNameAC:ArrayCollection = new ArrayCollection(gc.getEntryNames());
+				for each(var k:String in $names)
+				{
+					var __itemObj:Object = new Object();
+					__itemObj.itemName = k;
+					__itemObj.dp = __itemNameAC;
+					entryNameAC.addItem(__itemObj);
+				}				
+			}
+					
+			private function alert($msg:String):void
+			{
+				Alert.show($msg);
+			}
+			
+			private function echo($str:String):void
+			{
+				infoTA.text += $str+'\n';
+			}
+
+		]]>
+	</fx:Script>
+	<fx:Style source="assets/style.css"/>
+	<s:layout>
+		<s:HorizontalLayout paddingLeft="10" paddingTop="10" paddingBottom="10" paddingRight="10"/>
+	</s:layout>
+	<s:VGroup horizontalAlign="center" width="240" height="100%">
+		<s:BorderContainer id="first" backgroundColor="#E0FFFD" width="100%">
+			<s:layout>
+				<s:VerticalLayout horizontalAlign="center" paddingBottom="5" paddingTop="5"/>
+			</s:layout>
+			<s:Label text="第一步：登录" styleName="redBold"/>
+			<mx:Form id="loginForm" dropShadowVisible="false" defaultButton="{submitBTN}" width="100%">
+				<mx:FormItem label="Gmail账户：" width="100%">
+					<s:TextInput id="googleUserTI" width="100%"/>
+				</mx:FormItem>
+				<mx:FormItem label="Gmail密码：" width="100%">
+					<s:TextInput id="googlePWDTI" displayAsPassword="true" width="100%"/>
+				</mx:FormItem>
+			</mx:Form>			
+			<s:Button id="submitBTN" label="验证帐号" left="20" click="gc.login(googleUserTI.text, googlePWDTI.text)"/>
+		</s:BorderContainer>
+		<s:BorderContainer id="second" backgroundColor="#E0FFFD" width="100%" height="60" enabled="false">
+			<s:layout>
+				<s:VerticalLayout paddingTop="5" paddingBottom="5" horizontalAlign="center"/>
+			</s:layout>
+			<s:Label text="第二步：选择CSV文件" styleName="redBold"/>
+			<s:Button id="selectCSVBTN" label="选择CSV文件" click="selectCSVBTN_clickHandler()"/>
+		</s:BorderContainer>
+		<s:BorderContainer id="third" backgroundColor="#E0FFFD" width="100%" enabled="false">
+			<s:layout>
+				<s:VerticalLayout paddingTop="5" horizontalAlign="center" paddingLeft="5" paddingRight="5" paddingBottom="5"/>
+			</s:layout>
+			<s:Label text="第三步：设置并创建群组" styleName="redBold"/>
+			<s:CheckBox id="importToGoogleGroupCB" label="将导入的所有联系人也添加到："/>
+			<s:ComboBox id="selectImportGroupCOB" width="100%" enabled="{importToGoogleGroupCB.selected}" dataProvider="{googleGroupAC}" toolTip="选择一个已有的组，或者输入一个新组"/>
+			<s:Label text="从CSV中获取的组："/>
+			<s:DropDownList id="showCSVGroupDDL" width="100%" dataProvider="{csvGroupAC}" requireSelection="true" toolTip="若google联系人中已有同名的组，则会使用google联系人中的组。此处仅起到显示的作用。"/>
+			<s:Button id="createGroupBTN" label="创建群组" click="createGroupBTN_clickHandler()"/>
+		</s:BorderContainer>
+		<s:BorderContainer id="fourth" backgroundColor="#E0FFFD" width="100%" height="100%" enabled="false">
+			<s:layout>
+				<s:VerticalLayout paddingTop="5" paddingBottom="5" horizontalAlign="center"/>
+			</s:layout>
+			<s:Label text="第四步：设置映射并导入联系人" styleName="redBold"/>
+			<s:Scroller width="100%" height="100%">
+				<s:DataGroup id="entryMatchingDG" itemRenderer="comp.EntryItem" width="100%" height="100%" dataProvider="{entryNameAC}">
+					<s:layout>
+						<s:VerticalLayout horizontalAlign="center"/>
+					</s:layout>
+				</s:DataGroup>	
+			</s:Scroller>
+			<s:Button id="importBTN" label="开始导入" click="importBTN_clickHandler()"/>
+		</s:BorderContainer>
+	</s:VGroup>
+	<s:VGroup width="100%" height="100%">
+		<mx:DataGrid width="100%" height="30%" dataProvider="{csvEntryAC}"/>
+		<s:TextArea id="infoTA" width="100%" height="70%"/>
+	</s:VGroup>
+</s:WindowedApplication>
