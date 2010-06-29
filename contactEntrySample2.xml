@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:gd="http://schemas.google.com/g/2005" xmlns:gContact="http://schemas.google.com/contact/2008">
+  <atom:category scheme="http://schemas.google.com/g/2005#kind" term="http://schemas.google.com/contact/2008#contact" />
+  <gd:name>
+    <gd:fullName>张三</gd:fullName>
+    <gd:givenName>三</gd:givenName>
+    <gd:familyName>张</gd:familyName>
+  </gd:name>
+  <atom:content type="text">张三的备注</atom:content>
+  <gd:organization rel="http://schemas.google.com/g/2005#work">
+    <gd:orgName>公司</gd:orgName>
+    <gd:orgTitle>职务</gd:orgTitle>
+  </gd:organization>
+  <gd:email rel="http://schemas.google.com/g/2005#home" address="home1@123.com" primary="true" />
+  <gd:email rel="http://schemas.google.com/g/2005#home" address="home2@123.com" />
+  <gd:email rel="http://schemas.google.com/g/2005#work" address="work1@123.com" />
+  <gd:email rel="http://schemas.google.com/g/2005#home" address="work2@123.com" />
+  <gd:im address="110600103" protocol="http://schemas.google.com/g/2005#QQ" rel="http://schemas.google.com/g/2005#other" />
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#mobile">移动电话</gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#home">住宅电话1</gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#home">住宅电话2</gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#work">单位电话1</gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#work">单位电话2</gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#work_fax">单位传真</gd:phoneNumber>
+  <gd:structuredPostalAddress rel="http://schemas.google.com/g/2005#work" primary="true">
+    <gd:city>武汉</gd:city>
+    <gd:street>洪山路2号</gd:street>
+    <gd:region>湖北</gd:region>
+    <gd:subregion>武昌</gd:subregion>
+    <gd:postcode>430071</gd:postcode>
+    <gd:country>中国</gd:country>
+    <gd:formattedAddress>湖北科教大厦</gd:formattedAddress>
+  </gd:structuredPostalAddress>
+  <gContact:birthday when="2008-10-02" />
+  <gContact:website href="http://www.g.cn" rel="home-page" />
+  <gContact:groupMembershipInfo deleted="false" href="http://www.google.com/m8/feeds/groups/zrongzrong%40gmail.com/base/6" />
+  <gContact:groupMembershipInfo deleted="false" href="http://www.google.com/m8/feeds/groups/zrongzrong%40gmail.com/base/724f85870a8f3bcf" />
+</atom:entry>

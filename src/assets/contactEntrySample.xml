@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:gd="http://schemas.google.com/g/2005" xmlns:gContact="http://schemas.google.com/contact/2008">
+  <atom:category scheme="http://schemas.google.com/g/2005#kind" term="http://schemas.google.com/contact/2008#contact" />
+  <gd:name>
+    <gd:fullName></gd:fullName>
+    <gd:givenName></gd:givenName>
+    <gd:familyName></gd:familyName>
+  </gd:name>
+  <atom:content type="text"></atom:content>
+  <gd:organization rel="http://schemas.google.com/g/2005#work">
+    <gd:orgName></gd:orgName>
+    <gd:orgTitle></gd:orgTitle>
+    <gd:orgDepartment />
+  </gd:organization>
+  <gd:email rel="http://schemas.google.com/g/2005#home" address="" primary="" />
+  <gd:email rel="http://schemas.google.com/g/2005#work" address="work1@123.com" />
+  <gd:im address="" protocol="http://schemas.google.com/g/2005#QQ" rel="http://schemas.google.com/g/2005#other" />
+  <gd:im address="" protocol="http://schemas.google.com/g/2005#MSN" rel="http://schemas.google.com/g/2005#other" />
+  <gd:im address="" protocol="http://schemas.google.com/g/2005#SKYPE" rel="http://schemas.google.com/g/2005#other" />
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#mobile"></gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#home" primary=""></gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#work"></gd:phoneNumber>
+  <gd:phoneNumber rel="http://schemas.google.com/g/2005#work_fax"></gd:phoneNumber>
+  <gd:structuredPostalAddress rel="http://schemas.google.com/g/2005#work" primary="">
+    <gd:city></gd:city>
+    <gd:street></gd:street>
+    <gd:region></gd:region>
+    <gd:subregion></gd:subregion>
+    <gd:postcode></gd:postcode>
+    <gd:country></gd:country>
+    <gd:formattedAddress></gd:formattedAddress>
+  </gd:structuredPostalAddress>
+  <gContact:birthday when="" />
+  <gContact:website href="" rel="home-page" />
+  <gContact:website href="" rel="blog" />
+  <gContact:website href="" rel="work" />
+  <gContact:groupMembershipInfo deleted="false" href="" />
+</atom:entry>

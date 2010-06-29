@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns='http://www.w3.org/2005/Atom'
+      xmlns:gContact='http://schemas.google.com/contact/2008'
+      xmlns:gd='http://schemas.google.com/g/2005'
+      xmlns:batch='http://schemas.google.com/gdata/batch'>
+  <category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/g/2008#contact' />
+  <entry>
+    <batch:id/>
+    <batch:operation type='insert' />
+    <category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/g/2008#contact'/>
+	<gd:name>
+	  <gd:fullName></gd:fullName>
+	  <gd:givenName></gd:givenName>
+	  <gd:familyName></gd:familyName>
+	</gd:name>
+	<content type="text"/>
+	<gd:organization rel="http://schemas.google.com/g/2005#work">
+	  <gd:orgName></gd:orgName>
+	  <gd:orgTitle></gd:orgTitle>
+	  <gd:orgDepartment />
+	</gd:organization>
+	<gd:email rel="http://schemas.google.com/g/2005#work" address="" primary="true"/>
+	<gd:email rel="http://schemas.google.com/g/2005#home" address=""/>
+	<gd:im address="" protocol="http://schemas.google.com/g/2005#QQ" rel="http://schemas.google.com/g/2005#other" />
+	<gd:im address="" protocol="http://schemas.google.com/g/2005#MSN" rel="http://schemas.google.com/g/2005#other" />
+	<gd:im address="" protocol="http://schemas.google.com/g/2005#SKYPE" rel="http://schemas.google.com/g/2005#other" />
+	<gd:phoneNumber rel="http://schemas.google.com/g/2005#mobile" primary="true"/>
+	<gd:phoneNumber rel="http://schemas.google.com/g/2005#home"/>
+	<gd:phoneNumber rel="http://schemas.google.com/g/2005#work"/>
+	<gd:phoneNumber rel="http://schemas.google.com/g/2005#work_fax"/>
+	<gd:structuredPostalAddress rel="http://schemas.google.com/g/2005#work" primary="true">
+	  <gd:city/>
+	  <gd:street/>
+	  <gd:region/>
+	  <gd:subregion/>
+	  <gd:postcode/>
+	  <gd:country/>
+	  <gd:formattedAddress/>
+	</gd:structuredPostalAddress>
+	<gContact:birthday when="" />
+	<gContact:website href="" rel="home-page" />
+	<gContact:website href="" rel="blog" />
+	<gContact:website href="" rel="work" />
+	<gContact:groupMembershipInfo deleted="false" href="" />
+  </entry>
+</feed>
